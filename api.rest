@@ -1,0 +1,99 @@
+#host
+https://discovery.meethue.com
+
+#curl options
+ --silent
+# include response headers
+# --include
+# to ignore SSL when working with localhost
+# --insecure
+# to read a header(s) from a file.  File format should be like:
+# Header-Name: Header-Value
+# e.g. Authorization: YOUR_AUTH_TOKEN_HERE
+# -H @/path/to/file.txt
+
+# headers
+# Accept: application/json;
+# Connection: keep-alive
+# Content-Type: application/json; charset=utf-8
+# User-Agent: VRC
+
+# query
+GET /
+
+# body
+# {
+#   "test": 123
+# }
+
+#############
+
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+GET /clip/v2/resource/grouped_light/3a3e2753-d496-433e-84b6-15134d520666
+
+#############
+
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+PUT /clip/v2/resource/grouped_light/3a3e2753-d496-433e-84b6-15134d520666
+{
+    "on": {
+        "on": false
+    } 
+}
+
+#############
+
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+GET /clip/v2/resource/room
+
+#############
+
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+GET /clip/v2/resource/light
+#table lighstrip light: ee771934-4c64-47d7-9e2c-d9e4ecdd9d3c
+
+#############
+
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+GET /clip/v2/resource/device/ff479675-4915-4692-8b85-f33717dece9d
+
+#############
+
+https://192.168.1.219:443
+--silent
+--insecure
+POST /api
+{
+    "devicetype":"app_name#instance_name",
+    "generateclientkey":true
+}
+
+#############
+# [
+#     {
+#         "success": {
+#             "username": "1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3",
+#             "clientkey": "83C7945586C79469A24C8B10492D71F6"
+#         }
+#     }
+# ]
