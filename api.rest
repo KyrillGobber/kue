@@ -26,6 +26,52 @@ GET /
 #   "test": 123
 # }
 
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+GET /clip/v2/resource/scene
+
+#############
+
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+GET /clip/v2/resource/scene/6223bf09-c195-477f-939d-543f9d3d2204
+
+#############
+
+# scene glue
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+PUT /clip/v2/resource/scene/6223bf09-c195-477f-939d-543f9d3d2204
+
+{"recall":{"action": "active"}}
+# Scene read
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+PUT /clip/v2/resource/scene/decbe834-f752-46e1-a18f-2c6fc87e063b
+
+{"recall":{"action": "active"}}
+
+#############
+
+https://192.168.1.219
+--silent
+--insecure
+hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
+Content-Type: application/json
+GET /clip/v2/resource/zone
+
 #############
 
 https://192.168.1.219
@@ -56,7 +102,7 @@ https://192.168.1.219
 --insecure
 hue-application-key: 1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3
 Content-Type: application/json
-GET /clip/v2/resource/room
+GET /clip/v2/resource/room/9acaaa4a-767d-4171-990d-7cfe7749d589
 
 #############
 

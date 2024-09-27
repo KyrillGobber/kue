@@ -18,6 +18,7 @@ func main() {
 	}
 	defer ui.Close()
 
+	// termWidth, termHeight := ui.TerminalDimensions()
 	// Show loader
 	loader := widgets.NewParagraph()
 	loader.Text = "Loading..."
@@ -27,6 +28,7 @@ func main() {
 	// Create a channel to receive the fetched data
 	roomDataChan := make(chan *api.RoomResponse)
 	lightgroupDataChan := make(chan *api.LightGroupResponse)
+	scenesDataChan := make(chan *api.SceneResponse)
 	stopLoader := make(chan struct{})
 
 	// Start fetching data in a goroutine
@@ -46,6 +48,15 @@ func main() {
 		}
 		// time.Sleep(1 * time.Second)
 		lightgroupDataChan <- lightgrups
+	}()
+
+	go func() {
+		scenes, err := api.FetchScenes()
+		if err != nil {
+			log.Panic(err)
+		}
+		// time.Sleep(1 * time.Second)
+		scenesDataChan <- scenes
 	}()
 
 	ui.Render(loader)
@@ -70,14 +81,16 @@ func main() {
 	// Wait for data to be fetched
 	roomData := <-roomDataChan
 	lightgroupData := <-lightgroupDataChan
+	scenesData := <-scenesDataChan
 	// Stop the loader, run the actual app
 	close(stopLoader)
 
 	// Allocate Data
 	rooms := getRoomData(roomData)
+	scenes := getSceneDataByRoomOrZone(rooms[0].Id, scenesData)
 	zones := []string{"Main+", "Some zone", "again", "other"}
 	lights := []string{"light1+", "light2", "light3"}
-	mainData := ActiveData{Rooms: rooms, Zones: zones, Lights: lights}
+	mainData := ActiveData{Rooms: rooms, Zones: zones, Lights: lights, Scenes: scenes}
 
 	// Sections
 	header := getHeader()
@@ -85,6 +98,7 @@ func main() {
 	footer := getFooter()
 
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
+	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
 	zoneMenu := menu.GetItemMenu(mainData.Zones, menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 	lightMenu := menu.GetItemMenu(mainData.Lights, menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 
@@ -103,7 +117,7 @@ func main() {
 		}
 	}
 
-	ui.Render(header, tabpane, roommenu, footer)
+	ui.Render(header, tabpane, roommenu, sceneMenu, footer)
 
 	uiEvents := ui.PollEvents()
 	for {
@@ -123,14 +137,26 @@ func main() {
 			renderTab()
 		case "<Up>", "k":
 			activeMenu.ScrollUp()
+			if activeMenu == roommenu {
+				scenes = getSceneDataByRoomOrZone(rooms[activeMenu.SelectedRow].Id, scenesData)
+				sceneMenu.Rows = getSceneNames(scenes)
+			}
 		case "<Down>", "j":
 			activeMenu.ScrollDown()
+			if activeMenu == roommenu {
+				scenes = getSceneDataByRoomOrZone(rooms[activeMenu.SelectedRow].Id, scenesData)
+				sceneMenu.Rows = getSceneNames(scenes)
+			}
 		case "0", "1", "2", "3", "4":
 			newSelected, err := strconv.Atoi(e.ID)
 			if err != nil {
 				log.Fatal(err)
 			}
 			activeMenu.SelectedRow = newSelected
+			if activeMenu == roommenu {
+				scenes = getSceneDataByRoomOrZone(rooms[activeMenu.SelectedRow].Id, scenesData)
+				sceneMenu.Rows = getSceneNames(scenes)
+			}
 		case "t":
 			if activeMenu == roommenu {
 				roomLightgroupId := mainData.Rooms[activeMenu.SelectedRow].LightGroup
@@ -147,11 +173,39 @@ func main() {
 				}
 			}
 		case "<Enter>":
-			ui.Close()
-			return
+			if activeMenu == sceneMenu {
+				sceneId := scenes[activeMenu.SelectedRow].Id
+				_, err := api.SetSceneForRoom(sceneId)
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else {
+				activeMenu = sceneMenu
+				sceneMenu.BorderStyle = ui.NewStyle(ui.ColorYellow)
+			}
+		case "<Escape>":
+			sceneMenu.BorderStyle = ui.NewStyle(ui.ColorWhite)
+			switch tabpane.ActiveTabIndex {
+			case 0:
+				activeMenu = roommenu
+			case 1:
+				activeMenu = zoneMenu
+			case 2:
+				activeMenu = lightMenu
+			}
+
+		case "g":
+			activeMenu.ScrollTop()
+		case "G":
+			activeMenu.ScrollBottom()
+		case "d":
+			activeMenu.ScrollHalfPageDown()
+		case "u":
+			activeMenu.ScrollHalfPageUp()
 		}
-		ui.Render(header, tabpane, activeMenu, footer)
+		ui.Render(header, tabpane, activeMenu, sceneMenu, footer)
 	}
+
 }
 
 type Room struct {
@@ -162,10 +216,16 @@ type Room struct {
 	Type            string
 }
 
+type Scene struct {
+	Id   string
+	Name string
+}
+
 type ActiveData struct {
 	Rooms  []Room
 	Zones  []string
 	Lights []string
+	Scenes []Scene
 }
 
 func getRoomData(rooms *api.RoomResponse) []Room {
@@ -189,10 +249,31 @@ func getRoomData(rooms *api.RoomResponse) []Room {
 	return roomData
 }
 
+func getSceneDataByRoomOrZone(roomOrZoneId string, scenes *api.SceneResponse) []Scene {
+	sceneData := []Scene{}
+	for _, scene := range scenes.Data {
+		if scene.Group.Rid == roomOrZoneId {
+			sceneData = append(sceneData, Scene{
+				Id:   scene.ID,
+				Name: scene.Metadata.Name,
+			})
+		}
+	}
+	return sceneData
+}
+
+func getSceneNames(scenes []Scene) []string {
+	sceneNames := []string{}
+	for _, scene := range scenes {
+		sceneNames = append(sceneNames, fmt.Sprintf("%s", scene.Name))
+	}
+	return sceneNames
+}
+
 func getRoomNames(rooms []Room) []string {
 	roomNames := []string{}
 	for i, room := range rooms {
-		roomNames = append(roomNames, fmt.Sprintf("%d %s", i, room.Name))
+		roomNames = append(roomNames, fmt.Sprintf("[%d] %s", i, room.Name))
 	}
 	return roomNames
 }
@@ -208,7 +289,7 @@ func getHeader() *widgets.Paragraph {
 
 func getFooter() *widgets.Paragraph {
 	footer := widgets.NewParagraph()
-	footer.Text = "hjkl: navigation | enter: select | t: quicktoggle on/off | q: quit"
+    footer.Text = "hjkl: navigation | enter: scene select | ESC: back | t: quicktoggle on/off | q: quit"
 	footer.SetRect(0, 31, 100, 34)
 	footer.Border = true
 	return footer
@@ -216,7 +297,7 @@ func getFooter() *widgets.Paragraph {
 
 func getTabs() *widgets.TabPane {
 	tabpane := widgets.NewTabPane("Rooms", "Zones", "Lights")
-	tabpane.SetRect(5, 3, 50, 6)
+	tabpane.SetRect(5, 3, 100, 6)
 	tabpane.Border = true
 	return tabpane
 }
