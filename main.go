@@ -12,12 +12,132 @@ import (
 	"kyrill.dev/kue/menu"
 )
 
+type loadingChannels struct {
+    roomDataChan       chan *api.RoomResponse
+    lightgroupDataChan chan *api.LightGroupResponse
+    scenesDataChan     chan *api.SceneResponse
+    stopLoader         chan struct{}
+}
+
 func main() {
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize ui: %v", err)
 	}
 	defer ui.Close()
 
+    mainData := loadData()
+
+	// Sections
+	header := getHeader()
+	tabpane := getTabs()
+	footer := getFooter()
+
+	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
+	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
+	zoneMenu := menu.GetItemMenu(mainData.Zones, menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
+
+	activeMenu := roommenu
+	renderTab := func() {
+		switch tabpane.ActiveTabIndex {
+		case 0:
+			activeMenu = roommenu
+			ui.Render(roommenu)
+		case 1:
+			activeMenu = zoneMenu
+			ui.Render(zoneMenu)
+		}
+	}
+
+	ui.Render(header, tabpane, roommenu, sceneMenu, footer)
+
+	uiEvents := ui.PollEvents()
+	for {
+		e := <-uiEvents
+		switch e.ID {
+		case "q", "<C-c>":
+			return
+		case "h":
+			tabpane.FocusLeft()
+			ui.Clear()
+			ui.Render(header, tabpane, footer)
+			renderTab()
+		case "l":
+			tabpane.FocusRight()
+			ui.Clear()
+			ui.Render(header, tabpane, footer)
+			renderTab()
+		case "<Up>", "k":
+			activeMenu.ScrollUp()
+			if activeMenu == roommenu {
+				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes)
+				sceneMenu.Rows = getSceneNames(mainData.Scenes)
+			}
+		case "<Down>", "j":
+			activeMenu.ScrollDown()
+			if activeMenu == roommenu {
+				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes)
+				sceneMenu.Rows = getSceneNames(mainData.Scenes)
+			}
+		case "0", "1", "2", "3", "4":
+			newSelected, err := strconv.Atoi(e.ID)
+			if err != nil {
+				log.Fatal(err)
+			}
+			activeMenu.SelectedRow = newSelected
+			if activeMenu == roommenu {
+				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes)
+				sceneMenu.Rows = getSceneNames(mainData.Scenes)
+			}
+		case "t":
+			if activeMenu == roommenu {
+				roomLightgroupId := mainData.Rooms[activeMenu.SelectedRow].LightGroup
+				// Get if the lightgrup is on or off
+				for i := range mainData.LightGroups.Data {
+					if mainData.LightGroups.Data[i].ID == roomLightgroupId {
+						mainData.LightGroups.Data[i].On.On = !mainData.LightGroups.Data[i].On.On
+
+						err := api.ToggleRoom(roomLightgroupId, mainData.LightGroups.Data[i].On.On)
+						if err != nil {
+							log.Fatal(err)
+						}
+					}
+				}
+			}
+		case "<Enter>":
+			if activeMenu == sceneMenu {
+				sceneId := mainData.Scenes[activeMenu.SelectedRow].Id
+				_, err := api.SetSceneForRoom(sceneId)
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else {
+				activeMenu = sceneMenu
+				sceneMenu.BorderStyle = ui.NewStyle(ui.ColorYellow)
+			}
+		case "<Escape>":
+			sceneMenu.BorderStyle = ui.NewStyle(ui.ColorWhite)
+			switch tabpane.ActiveTabIndex {
+			case 0:
+				activeMenu = roommenu
+			case 1:
+				activeMenu = zoneMenu
+			}
+
+		case "g":
+			activeMenu.ScrollTop()
+		case "G":
+			activeMenu.ScrollBottom()
+		case "d":
+			activeMenu.ScrollHalfPageDown()
+		case "u":
+			activeMenu.ScrollHalfPageUp()
+		}
+		ui.Render(header, tabpane, activeMenu, sceneMenu, footer)
+	}
+
+}
+
+func loadData() ActiveData {
 	// termWidth, termHeight := ui.TerminalDimensions()
 	// Show loader
 	loader := widgets.NewParagraph()
@@ -89,123 +209,15 @@ func main() {
 	rooms := getRoomData(roomData)
 	scenes := getSceneDataByRoomOrZone(rooms[0].Id, scenesData)
 	zones := []string{"Main+", "Some zone", "again", "other"}
-	lights := []string{"light1+", "light2", "light3"}
-	mainData := ActiveData{Rooms: rooms, Zones: zones, Lights: lights, Scenes: scenes}
+    return ActiveData{Rooms: rooms, LightGroups: lightgroupData, Zones: zones, Scenes: scenes, AllScenes: *scenesData}
+}
 
-	// Sections
-	header := getHeader()
-	tabpane := getTabs()
-	footer := getFooter()
-
-	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
-	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
-	zoneMenu := menu.GetItemMenu(mainData.Zones, menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
-	lightMenu := menu.GetItemMenu(mainData.Lights, menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
-
-	activeMenu := roommenu
-	renderTab := func() {
-		switch tabpane.ActiveTabIndex {
-		case 0:
-			activeMenu = roommenu
-			ui.Render(roommenu)
-		case 1:
-			activeMenu = zoneMenu
-			ui.Render(zoneMenu)
-		case 2:
-			activeMenu = lightMenu
-			ui.Render(lightMenu)
-		}
-	}
-
-	ui.Render(header, tabpane, roommenu, sceneMenu, footer)
-
-	uiEvents := ui.PollEvents()
-	for {
-		e := <-uiEvents
-		switch e.ID {
-		case "q", "<C-c>":
-			return
-		case "h":
-			tabpane.FocusLeft()
-			ui.Clear()
-			ui.Render(header, tabpane, footer)
-			renderTab()
-		case "l":
-			tabpane.FocusRight()
-			ui.Clear()
-			ui.Render(header, tabpane, footer)
-			renderTab()
-		case "<Up>", "k":
-			activeMenu.ScrollUp()
-			if activeMenu == roommenu {
-				scenes = getSceneDataByRoomOrZone(rooms[activeMenu.SelectedRow].Id, scenesData)
-				sceneMenu.Rows = getSceneNames(scenes)
-			}
-		case "<Down>", "j":
-			activeMenu.ScrollDown()
-			if activeMenu == roommenu {
-				scenes = getSceneDataByRoomOrZone(rooms[activeMenu.SelectedRow].Id, scenesData)
-				sceneMenu.Rows = getSceneNames(scenes)
-			}
-		case "0", "1", "2", "3", "4":
-			newSelected, err := strconv.Atoi(e.ID)
-			if err != nil {
-				log.Fatal(err)
-			}
-			activeMenu.SelectedRow = newSelected
-			if activeMenu == roommenu {
-				scenes = getSceneDataByRoomOrZone(rooms[activeMenu.SelectedRow].Id, scenesData)
-				sceneMenu.Rows = getSceneNames(scenes)
-			}
-		case "t":
-			if activeMenu == roommenu {
-				roomLightgroupId := mainData.Rooms[activeMenu.SelectedRow].LightGroup
-				// Get if the lightgrup is on or off
-				for i := range lightgroupData.Data {
-					if lightgroupData.Data[i].ID == roomLightgroupId {
-						lightgroupData.Data[i].On.On = !lightgroupData.Data[i].On.On
-
-						err := api.ToggleRoom(roomLightgroupId, lightgroupData.Data[i].On.On)
-						if err != nil {
-							log.Fatal(err)
-						}
-					}
-				}
-			}
-		case "<Enter>":
-			if activeMenu == sceneMenu {
-				sceneId := scenes[activeMenu.SelectedRow].Id
-				_, err := api.SetSceneForRoom(sceneId)
-				if err != nil {
-					log.Fatal(err)
-				}
-			} else {
-				activeMenu = sceneMenu
-				sceneMenu.BorderStyle = ui.NewStyle(ui.ColorYellow)
-			}
-		case "<Escape>":
-			sceneMenu.BorderStyle = ui.NewStyle(ui.ColorWhite)
-			switch tabpane.ActiveTabIndex {
-			case 0:
-				activeMenu = roommenu
-			case 1:
-				activeMenu = zoneMenu
-			case 2:
-				activeMenu = lightMenu
-			}
-
-		case "g":
-			activeMenu.ScrollTop()
-		case "G":
-			activeMenu.ScrollBottom()
-		case "d":
-			activeMenu.ScrollHalfPageDown()
-		case "u":
-			activeMenu.ScrollHalfPageUp()
-		}
-		ui.Render(header, tabpane, activeMenu, sceneMenu, footer)
-	}
-
+type ActiveData struct {
+	Rooms  []Room
+    LightGroups *api.LightGroupResponse
+	Zones  []string
+	Scenes []Scene
+    AllScenes api.SceneResponse
 }
 
 type Room struct {
@@ -219,13 +231,6 @@ type Room struct {
 type Scene struct {
 	Id   string
 	Name string
-}
-
-type ActiveData struct {
-	Rooms  []Room
-	Zones  []string
-	Lights []string
-	Scenes []Scene
 }
 
 func getRoomData(rooms *api.RoomResponse) []Room {
@@ -289,14 +294,14 @@ func getHeader() *widgets.Paragraph {
 
 func getFooter() *widgets.Paragraph {
 	footer := widgets.NewParagraph()
-    footer.Text = "hjkl: navigation | enter: scene select | ESC: back | t: quicktoggle on/off | q: quit"
+	footer.Text = "hjkl: navigation | enter: scene select | ESC: back | t: quicktoggle on/off | q: quit"
 	footer.SetRect(0, 31, 100, 34)
 	footer.Border = true
 	return footer
 }
 
 func getTabs() *widgets.TabPane {
-	tabpane := widgets.NewTabPane("Rooms", "Zones", "Lights")
+	tabpane := widgets.NewTabPane("Rooms", "Zones")
 	tabpane.SetRect(5, 3, 100, 6)
 	tabpane.Border = true
 	return tabpane
