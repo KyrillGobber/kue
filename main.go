@@ -20,16 +20,20 @@ func main() {
 	}
 	defer ui.Close()
 
-    // If no config file: search for bridge and save
-    config.LoadConfig()
+	// If no config file: search for bridge and save
+	err := config.LoadConfig()
+	if err != nil {
+		fmt.Printf("Error loading or creating config: %v\n", err)
+        return
+	}
 
-    // Load data
-    mainData := loadData()
+	// Load data
+	mainData := loadData()
 
 	// Sections
-    header := uiElements.GetHeader()
+	header := uiElements.GetHeader()
 	tabpane := uiElements.GetTabs()
-    footer := uiElements.GetFooter()
+	footer := uiElements.GetFooter()
 
 	//termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
@@ -207,6 +211,5 @@ func loadData() ActiveData {
 	rooms := getRoomData(roomData)
 	scenes := getSceneDataByRoomOrZone(rooms[0].Id, scenesData)
 	zones := []string{"Main+", "Some zone", "again", "other"}
-    return ActiveData{Rooms: rooms, LightGroups: lightgroupData, Zones: zones, Scenes: scenes, AllScenes: *scenesData}
+	return ActiveData{Rooms: rooms, LightGroups: lightgroupData, Zones: zones, Scenes: scenes, AllScenes: *scenesData}
 }
-

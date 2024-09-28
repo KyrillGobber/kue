@@ -16,13 +16,13 @@ const filename = "kue.conf"
 
 var config *ConfigType
 
-func LoadConfig() {
+func LoadConfig() error {
 	var err error
 	config, err = loadOrCreateConfig()
 	if err != nil {
-		fmt.Printf("Error loading or creating config: %v\n", err)
-		return
+		return err
 	}
+    return err
 }
 
 func GetConfig() *ConfigType {
