@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"kyrill.dev/kue/config"
 )
 
 func FetchRooms() (*RoomResponse, error) {
     // Create new request
-    req, err := http.NewRequest("GET", "https://192.168.1.219/clip/v2/resource/room", nil)
+    req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", config.GetConfig().BridgeAddress, RoomUrl), nil)
     if err != nil {
         return nil, err
     }

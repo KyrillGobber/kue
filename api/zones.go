@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"kyrill.dev/kue/config"
 )
 
 func FetchZones() (*ZoneResponse, error) {
     // Create new request
-    req, err := http.NewRequest("GET", "https://192.168.1.219/clip/v2/resource/zone", nil)
+    req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", config.GetConfig().BridgeAddress, ZoneUrl), nil)
     if err != nil {
         return nil, err
     }

@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"kyrill.dev/kue/config"
 )
 
 func FetchLightGroups() (*LightGroupResponse, error) {
     // Create new request
-    req, err := http.NewRequest("GET", "https://192.168.1.219/clip/v2/resource/grouped_light", nil)
+    req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", config.GetConfig().BridgeAddress, LightGroupUrl), nil)
     if err != nil {
         return nil, err
     }

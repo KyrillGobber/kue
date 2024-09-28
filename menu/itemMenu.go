@@ -5,10 +5,10 @@ import (
 	"github.com/gizak/termui/v3/widgets"
 )
 
-func GetItemMenu(rooms []string, coords Coords) *widgets.List {
+func GetItemMenu(items []string, coords Coords) *widgets.List {
 
 	itemList := widgets.NewList()
-	itemList.Rows = rooms
+	itemList.Rows = items
 	itemList.TextStyle = ui.NewStyle(ui.ColorWhite)
     itemList.SelectedRowStyle.Fg = ui.ColorYellow
 	itemList.WrapText = false

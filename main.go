@@ -9,15 +9,10 @@ import (
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
 	"kyrill.dev/kue/api"
+	"kyrill.dev/kue/config"
 	"kyrill.dev/kue/menu"
+	"kyrill.dev/kue/uiElements"
 )
-
-type loadingChannels struct {
-    roomDataChan       chan *api.RoomResponse
-    lightgroupDataChan chan *api.LightGroupResponse
-    scenesDataChan     chan *api.SceneResponse
-    stopLoader         chan struct{}
-}
 
 func main() {
 	if err := ui.Init(); err != nil {
@@ -25,13 +20,18 @@ func main() {
 	}
 	defer ui.Close()
 
+    // If no config file: search for bridge and save
+    config.LoadConfig()
+
+    // Load data
     mainData := loadData()
 
 	// Sections
-	header := getHeader()
-	tabpane := getTabs()
-	footer := getFooter()
+    header := uiElements.GetHeader()
+	tabpane := uiElements.GetTabs()
+    footer := uiElements.GetFooter()
 
+	//termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
 	zoneMenu := menu.GetItemMenu(mainData.Zones, menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
@@ -134,11 +134,9 @@ func main() {
 		}
 		ui.Render(header, tabpane, activeMenu, sceneMenu, footer)
 	}
-
 }
 
 func loadData() ActiveData {
-	// termWidth, termHeight := ui.TerminalDimensions()
 	// Show loader
 	loader := widgets.NewParagraph()
 	loader.Text = "Loading..."
@@ -212,97 +210,3 @@ func loadData() ActiveData {
     return ActiveData{Rooms: rooms, LightGroups: lightgroupData, Zones: zones, Scenes: scenes, AllScenes: *scenesData}
 }
 
-type ActiveData struct {
-	Rooms  []Room
-    LightGroups *api.LightGroupResponse
-	Zones  []string
-	Scenes []Scene
-    AllScenes api.SceneResponse
-}
-
-type Room struct {
-	Id              string
-	Name            string
-	LightGroup      string
-	LightGroupOnOff string
-	Type            string
-}
-
-type Scene struct {
-	Id   string
-	Name string
-}
-
-func getRoomData(rooms *api.RoomResponse) []Room {
-	roomData := []Room{}
-	for _, room := range rooms.Data {
-		var lightGroup string
-		for _, service := range room.Services {
-			if service.Rtype == "grouped_light" {
-				lightGroup = service.Rid
-				break
-			}
-		}
-
-		roomData = append(roomData, Room{
-			Id:         room.ID,
-			Name:       room.Metadata.Name,
-			LightGroup: lightGroup,
-			Type:       room.Type,
-		})
-	}
-	return roomData
-}
-
-func getSceneDataByRoomOrZone(roomOrZoneId string, scenes *api.SceneResponse) []Scene {
-	sceneData := []Scene{}
-	for _, scene := range scenes.Data {
-		if scene.Group.Rid == roomOrZoneId {
-			sceneData = append(sceneData, Scene{
-				Id:   scene.ID,
-				Name: scene.Metadata.Name,
-			})
-		}
-	}
-	return sceneData
-}
-
-func getSceneNames(scenes []Scene) []string {
-	sceneNames := []string{}
-	for _, scene := range scenes {
-		sceneNames = append(sceneNames, fmt.Sprintf("%s", scene.Name))
-	}
-	return sceneNames
-}
-
-func getRoomNames(rooms []Room) []string {
-	roomNames := []string{}
-	for i, room := range rooms {
-		roomNames = append(roomNames, fmt.Sprintf("[%d] %s", i, room.Name))
-	}
-	return roomNames
-}
-
-func getHeader() *widgets.Paragraph {
-	header := widgets.NewParagraph()
-	header.Text = "Kue, your CLI Hue controller"
-	header.SetRect(0, 0, 100, 3)
-	header.Border = true
-	header.TextStyle.Fg = ui.ColorGreen
-	return header
-}
-
-func getFooter() *widgets.Paragraph {
-	footer := widgets.NewParagraph()
-	footer.Text = "hjkl: navigation | enter: scene select | ESC: back | t: quicktoggle on/off | q: quit"
-	footer.SetRect(0, 31, 100, 34)
-	footer.Border = true
-	return footer
-}
-
-func getTabs() *widgets.TabPane {
-	tabpane := widgets.NewTabPane("Rooms", "Zones")
-	tabpane.SetRect(5, 3, 100, 6)
-	tabpane.Border = true
-	return tabpane
-}

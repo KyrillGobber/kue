@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"kyrill.dev/kue/config"
 )
 
 func FetchScenes() (*SceneResponse, error) {
     // Create new request
-    req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://192.168.1.219/clip/v2/resource/scene"), nil)
+    req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", config.GetConfig().BridgeAddress, SceneUrl), nil)
     if err != nil {
         return nil, err
     }
