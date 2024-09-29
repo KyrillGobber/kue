@@ -27,6 +27,27 @@ func getRoomData(rooms *api.RoomResponse) []Room {
 	return roomData
 }
 
+func getZoneData(zones *api.ZoneResponse) []Zone {
+	zoneData := []Zone{}
+	for _, zone := range zones.Data {
+		var lightGroup string
+		for _, service := range zone.Services {
+			if service.Rtype == "grouped_light" {
+				lightGroup = service.Rid
+				break
+			}
+		}
+
+		zoneData = append(zoneData, Zone{
+			Id:         zone.ID,
+			Name:       zone.Metadata.Name,
+			LightGroup: lightGroup,
+			Type:       zone.Type,
+		})
+	}
+	return zoneData
+}
+
 func getSceneDataByRoomOrZone(roomOrZoneId string, scenes *api.SceneResponse) []Scene {
 	sceneData := []Scene{}
 	for _, scene := range scenes.Data {

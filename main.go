@@ -38,7 +38,7 @@ func main() {
 	//termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
-	zoneMenu := menu.GetItemMenu(mainData.Zones, menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
+	zoneMenu := menu.GetItemMenu(getRoomNames(mainData.Zones/*Time for generics now*/), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 
 	activeMenu := roommenu
 	renderTab := func() {
@@ -149,6 +149,7 @@ func loadData() ActiveData {
 
 	// Create a channel to receive the fetched data
 	roomDataChan := make(chan *api.RoomResponse)
+	zoneDataChan := make(chan *api.ZoneResponse)
 	lightgroupDataChan := make(chan *api.LightGroupResponse)
 	scenesDataChan := make(chan *api.SceneResponse)
 	stopLoader := make(chan struct{})
@@ -161,6 +162,15 @@ func loadData() ActiveData {
 		}
 		// time.Sleep(1 * time.Second)
 		roomDataChan <- rooms
+	}()
+
+	go func() {
+		zones, err := api.FetchZones()
+		if err != nil {
+			log.Panic(err)
+		}
+		// time.Sleep(1 * time.Second)
+		zoneDataChan <- zones
 	}()
 
 	go func() {
@@ -202,6 +212,7 @@ func loadData() ActiveData {
 
 	// Wait for data to be fetched
 	roomData := <-roomDataChan
+	zoneData := <-zoneDataChan
 	lightgroupData := <-lightgroupDataChan
 	scenesData := <-scenesDataChan
 	// Stop the loader, run the actual app
@@ -210,6 +221,6 @@ func loadData() ActiveData {
 	// Allocate Data
 	rooms := getRoomData(roomData)
 	scenes := getSceneDataByRoomOrZone(rooms[0].Id, scenesData)
-	zones := []string{"Main+", "Some zone", "again", "other"}
+	zones := getZoneData(zoneData)
 	return ActiveData{Rooms: rooms, LightGroups: lightgroupData, Zones: zones, Scenes: scenes, AllScenes: *scenesData}
 }
