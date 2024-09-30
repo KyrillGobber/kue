@@ -10,6 +10,8 @@ import (
 
 type ConfigType struct {
 	BridgeAddress string
+	UserName      string
+	ClientKey     string
 }
 
 const filename = "kue.conf"
@@ -22,7 +24,7 @@ func LoadConfig() error {
 	if err != nil {
 		return err
 	}
-    return err
+	return err
 }
 
 func GetConfig() *ConfigType {
@@ -30,12 +32,12 @@ func GetConfig() *ConfigType {
 }
 
 func getConfigPath() (string, error) {
-    var dev bool
+	var dev bool
 	flag.BoolVar(&dev, "dev", false, "Run in development mode")
 	flag.Parse()
-    if dev {
-        return "/home/ky/projects/kue/kue.conf", nil
-    }
+	if dev {
+		return "/home/ky/projects/kue/kue.conf", nil
+	}
 	exePath, err := os.Executable()
 	if err != nil {
 		return "", err
@@ -76,12 +78,11 @@ func readConfig(configPath string) (*ConfigType, error) {
 }
 
 func createNewConfig(configPath string) (*ConfigType, error) {
-    address := discoveryProcess()
-    if address == "" {
-        return nil, fmt.Errorf("no bridge selected")
-    }
+	configData := discoveryProcess()
 	config := &ConfigType{
-        BridgeAddress: fmt.Sprintf("https://%s", address),
+		BridgeAddress: fmt.Sprintf("https://%s", configData.BridgeAddress),
+		UserName:      configData.UserName,
+		ClientKey:     configData.ClientKey,
 	}
 
 	file, err := os.Create(configPath)

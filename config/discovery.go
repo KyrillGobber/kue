@@ -1,19 +1,22 @@
 package config
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
 	"github.com/gizak/termui/v3/widgets"
+	"kyrill.dev/kue/uiElements"
 )
 
-func discoveryProcess() string {
+func discoveryProcess() *ConfigType {
 	discoveryData := discoverBridges()
 	bridgeAddresses := []string{}
 	for _, bridge := range *discoveryData {
@@ -28,15 +31,29 @@ func discoveryProcess() string {
 		switch e.ID {
 		case "q", "<C-c>":
 			ui.Close()
-			return ""
+			return nil
 		case "<Up>", "k":
 			bridgesList.ScrollUp()
 		case "<Down>", "j":
 			bridgesList.ScrollDown()
 		case "<Enter>":
-			return (*discoveryData)[bridgesList.SelectedRow].Internalipaddress
+			address := (*discoveryData)[bridgesList.SelectedRow].Internalipaddress
+			linkData, err := PostNewUserToBridge(address)
+			if err != nil {
+				uiElements.ShowMessage(err.Error())
+			} else if (*linkData)[0].Error.Description != "" {
+				uiElements.ShowMessage((*linkData)[0].Error.Description)
+			} else {
+				userName := (*linkData)[0].Success.Username
+				clientKey := (*linkData)[0].Success.Clientkey
+				return &ConfigType{
+					BridgeAddress: address,
+					UserName:      userName,
+					ClientKey:     clientKey,
+				}
+			}
 		}
-        ui.Render(getBridgeHeader(), getGuideHeader(), bridgesList)
+		ui.Render(getBridgeHeader(), getGuideHeader(), bridgesList)
 	}
 }
 
@@ -51,10 +68,10 @@ func getBridgeHeader() *widgets.Paragraph {
 
 func getGuideHeader() *widgets.Paragraph {
 	header := widgets.NewParagraph()
-	header.Text = "Pick your bridge"
+	header.Text = "Press the linkbutton on your bridge and select it from the list"
 	header.SetRect(0, 3, 100, 6)
 	header.Border = true
-	header.TextStyle.Fg = ui.ColorGreen
+	header.TextStyle.Fg = ui.ColorYellow
 	return header
 }
 
@@ -77,7 +94,6 @@ func callDiscoveryEndpoint() (*DiscoveryResponse, error) {
 	}
 
 	// add headers
-	req.Header.Add("hue-application-key", "1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3")
 	req.Header.Add("Content-Type", "application/json")
 
 	// create client (with ssl disabled)
@@ -89,6 +105,54 @@ func callDiscoveryEndpoint() (*DiscoveryResponse, error) {
 
 	// send request
 	var response DiscoveryResponse
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode == http.StatusOK {
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		// Can be = intead of := because we are reassigning the eld err variable, not creating it newly
+		err = json.Unmarshal(bodyBytes, &response)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		return nil, fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
+	}
+
+	return &response, nil
+}
+
+func PostNewUserToBridge(address string) (*LinkResponse, error) {
+	// Create new request
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+	data := []byte(fmt.Sprintf(`{"devicetype":"%s", "generateclientkey":true}`, "kue-"+hostname))
+	req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("http://%s/api", address), bytes.NewBuffer(data))
+	if err != nil {
+		return nil, err
+	}
+
+	// add headers
+	req.Header.Add("Content-Type", "application/json")
+
+	// create client (with ssl disabled)
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	// send request
+	var response LinkResponse
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err
