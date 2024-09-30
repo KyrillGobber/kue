@@ -73,7 +73,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./app_macos/kue_mac
+        asset_path: ./kue_mac/kue_mac
         asset_name: kue_mac
         asset_content_type: application/octet-stream
 
