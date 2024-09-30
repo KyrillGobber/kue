@@ -9,8 +9,11 @@ I don't want to get off my pc everytime I change my lighting, and unlocking the 
 ## How to use
 To not naviagate to the executable location every time, just put the executable into your path and run `kue` in your terminal.
 
+The app will find your bridge - press the link button and select your bridge from the list, and the setup should be done.
+
 ## What's planned:
 - Add colors to scenes, so you know what to expect for each scene
 - Add brightness setting
 - Add control for single lights
+
 ... And maybe some things more.
