@@ -19,7 +19,7 @@ jobs:
           - os: ubuntu-latest
             output_name: kue
           - os: macos-latest
-            output_name: kue_macos
+            output_name: kue_mac
           - os: windows-latest
             output_name: kue.exe
 
