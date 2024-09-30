@@ -7,18 +7,20 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+
+	"kyrill.dev/kue/config"
 )
 
 func SetSceneForRoom(sceneId string) (*SetSceneResponse, error){
     // Create new request
     data := []byte(`{"recall":{"action": "active"}}`)
 
-    req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://192.168.1.219/clip/v2/resource/scene/%s", sceneId), bytes.NewBuffer(data))
+    req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s%s/%s", config.GetConfig().BridgeAddress, SceneUrl, sceneId), bytes.NewBuffer(data))
     if err != nil {
         return nil, err
     }
     // add headers
-    req.Header.Add("hue-application-key", "1zUztGOp6k4Z7K1Krz2RJHlbHEpMYkcjTbmfdrL3")
+    req.Header.Add("hue-application-key", config.GetConfig().UserName)
     req.Header.Add("Content-Type", "application/json")
 
     // add body

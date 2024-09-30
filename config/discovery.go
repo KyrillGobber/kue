@@ -44,6 +44,7 @@ func discoveryProcess() *ConfigType {
 			} else if (*linkData)[0].Error.Description != "" {
 				uiElements.ShowMessage((*linkData)[0].Error.Description)
 			} else {
+                ui.Clear()
 				userName := (*linkData)[0].Success.Username
 				clientKey := (*linkData)[0].Success.Clientkey
 				return &ConfigType{

@@ -17,10 +17,3 @@ type LinkResponse []struct {
 		Clientkey string `json:"clientkey"`
 	} `json:"success"`
 }
-
-// type LinkSuccessResponse []struct {
-// 	Success struct {
-// 		Username  string `json:"username"`
-// 		Clientkey string `json:"clientkey"`
-// 	} `json:"success"`
-// }

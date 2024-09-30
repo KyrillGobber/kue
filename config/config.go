@@ -97,6 +97,5 @@ func createNewConfig(configPath string) (*ConfigType, error) {
 		return nil, fmt.Errorf("error encoding config: %v", err)
 	}
 
-	fmt.Println("New configuration file created:", configPath)
 	return config, nil
 }
