@@ -38,7 +38,7 @@ func main() {
 	//termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
-	zoneMenu := menu.GetItemMenu(getRoomNames(mainData.Zones/*Time for generics now*/), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
+	zoneMenu := menu.GetItemMenu(getRoomNames(mainData.Zones), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 
 	activeMenu := roommenu
 	renderTab := func() {
@@ -156,7 +156,7 @@ func loadData() ActiveData {
 
 	// Start fetching data in a goroutine
 	go func() {
-		rooms, err := api.FetchRooms()
+		rooms, err := api.FetchMe[api.RoomResponse](api.RoomUrl, nil)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -165,7 +165,7 @@ func loadData() ActiveData {
 	}()
 
 	go func() {
-		zones, err := api.FetchZones()
+		zones, err := api.FetchMe[api.ZoneResponse](api.ZoneUrl, nil)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -174,7 +174,7 @@ func loadData() ActiveData {
 	}()
 
 	go func() {
-		lightgrups, err := api.FetchLightGroups()
+		lightgrups, err := api.FetchMe[api.LightGroupResponse](api.LightGroupUrl, nil)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -183,7 +183,7 @@ func loadData() ActiveData {
 	}()
 
 	go func() {
-		scenes, err := api.FetchScenes()
+		scenes, err := api.FetchMe[api.SceneResponse](api.SceneUrl, nil)
 		if err != nil {
 			log.Panic(err)
 		}

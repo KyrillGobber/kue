@@ -3,22 +3,14 @@ package main
 import "kyrill.dev/kue/api"
 
 type ActiveData struct {
-	Rooms  []Room
+	Rooms  []RoomOrZone
+	Zones  []RoomOrZone
     LightGroups *api.LightGroupResponse
-	Zones  []Zone
 	Scenes []Scene
     AllScenes api.SceneResponse
 }
 
-type Room struct {
-	Id              string
-	Name            string
-	LightGroup      string
-	LightGroupOnOff string
-	Type            string
-}
-
-type Zone struct {
+type RoomOrZone struct {
 	Id              string
 	Name            string
 	LightGroup      string

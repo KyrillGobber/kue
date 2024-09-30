@@ -10,9 +10,15 @@ import (
 	"kyrill.dev/kue/config"
 )
 
-func FetchZones() (*ZoneResponse, error) {
+func FetchMe[T any](url string, id *string) (*T, error) {
     // Create new request
-    req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", config.GetConfig().BridgeAddress, ZoneUrl), nil)
+    var fetchUrl string 
+    if id != nil {
+        fetchUrl = fmt.Sprintf("%s%s/%s", config.GetConfig().BridgeAddress, url, *id)
+    } else {
+        fetchUrl = fmt.Sprintf("%s%s", config.GetConfig().BridgeAddress, url)
+    }
+    req, err := http.NewRequest(http.MethodGet, fetchUrl, nil)
     if err != nil {
         return nil, err
     }
@@ -29,7 +35,7 @@ func FetchZones() (*ZoneResponse, error) {
     }    
 
     // send request
-    var response ZoneResponse
+    var response T
     res, err := client.Do(req)
     if err != nil {
         return nil, err

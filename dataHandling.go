@@ -6,8 +6,8 @@ import (
 	"kyrill.dev/kue/api"
 )
 
-func getRoomData(rooms *api.RoomResponse) []Room {
-	roomData := []Room{}
+func getRoomData(rooms *api.RoomResponse) []RoomOrZone {
+	roomData := []RoomOrZone{}
 	for _, room := range rooms.Data {
 		var lightGroup string
 		for _, service := range room.Services {
@@ -17,7 +17,7 @@ func getRoomData(rooms *api.RoomResponse) []Room {
 			}
 		}
 
-		roomData = append(roomData, Room{
+		roomData = append(roomData, RoomOrZone{
 			Id:         room.ID,
 			Name:       room.Metadata.Name,
 			LightGroup: lightGroup,
@@ -27,8 +27,8 @@ func getRoomData(rooms *api.RoomResponse) []Room {
 	return roomData
 }
 
-func getZoneData(zones *api.ZoneResponse) []Zone {
-	zoneData := []Zone{}
+func getZoneData(zones *api.ZoneResponse) []RoomOrZone {
+	zoneData := []RoomOrZone{}
 	for _, zone := range zones.Data {
 		var lightGroup string
 		for _, service := range zone.Services {
@@ -38,7 +38,7 @@ func getZoneData(zones *api.ZoneResponse) []Zone {
 			}
 		}
 
-		zoneData = append(zoneData, Zone{
+		zoneData = append(zoneData, RoomOrZone{
 			Id:         zone.ID,
 			Name:       zone.Metadata.Name,
 			LightGroup: lightGroup,
@@ -69,7 +69,7 @@ func getSceneNames(scenes []Scene) []string {
 	return sceneNames
 }
 
-func getRoomNames(rooms []Room) []string {
+func getRoomNames(rooms []RoomOrZone) []string {
 	roomNames := []string{}
 	for i, room := range rooms {
 		roomNames = append(roomNames, fmt.Sprintf("[%d] %s", i, room.Name))
