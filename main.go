@@ -24,7 +24,7 @@ func main() {
 	err := config.LoadConfig()
 	if err != nil {
 		fmt.Printf("Error loading or creating config: %v\n", err)
-        return
+		return
 	}
 
 	// Load data
@@ -35,7 +35,7 @@ func main() {
 	tabpane := uiElements.GetTabs()
 	footer := uiElements.GetFooter()
 
-	//termWidth, termHeight := ui.TerminalDimensions()
+	// termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
 	zoneMenu := menu.GetItemMenu(getRoomNames(mainData.Zones), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
@@ -95,18 +95,20 @@ func main() {
 		case "t":
 			if activeMenu == roommenu {
 				roomLightgroupId := mainData.Rooms[activeMenu.SelectedRow].LightGroup
-				// Get if the lightgrup is on or off
-				for i := range mainData.LightGroups.Data {
-					if mainData.LightGroups.Data[i].ID == roomLightgroupId {
-						mainData.LightGroups.Data[i].On.On = !mainData.LightGroups.Data[i].On.On
-
-						err := api.ToggleRoom(roomLightgroupId, mainData.LightGroups.Data[i].On.On)
-						if err != nil {
-							log.Fatal(err)
-						}
-					}
-				}
+                toggleLightgroup(roomLightgroupId, mainData)
 			}
+			if activeMenu == zoneMenu {
+				LightgroupId := mainData.Zones[activeMenu.SelectedRow].LightGroup
+				// Get if the lightgrup is on or off
+				toggleLightgroup(LightgroupId, mainData)
+			}
+			if activeMenu == sceneMenu {
+				sceneId := mainData.Scenes[activeMenu.SelectedRow].Id
+				_, err := api.SetSceneForRoom(sceneId)
+				if err != nil {
+					log.Fatal(err)
+				}
+            }
 		case "<Enter>":
 			if activeMenu == sceneMenu {
 				sceneId := mainData.Scenes[activeMenu.SelectedRow].Id
@@ -223,4 +225,17 @@ func loadData() ActiveData {
 	scenes := getSceneDataByRoomOrZone(rooms[0].Id, scenesData)
 	zones := getZoneData(zoneData)
 	return ActiveData{Rooms: rooms, LightGroups: lightgroupData, Zones: zones, Scenes: scenes, AllScenes: *scenesData}
+}
+
+func toggleLightgroup(LightgroupId string, mainData ActiveData) {
+	for i := range mainData.LightGroups.Data {
+		if mainData.LightGroups.Data[i].ID == LightgroupId {
+			mainData.LightGroups.Data[i].On.On = !mainData.LightGroups.Data[i].On.On
+
+			err := api.ToggleLightgroup(LightgroupId, mainData.LightGroups.Data[i].On.On)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
 }

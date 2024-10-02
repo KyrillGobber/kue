@@ -9,7 +9,7 @@ import (
 	"kyrill.dev/kue/config"
 )
 
-func ToggleRoom(lightGroupId string, state bool) error {
+func ToggleLightgroup(lightGroupId string, state bool) error {
 	data := []byte(fmt.Sprintf(`{"on": { "on": %t }}`, state))
 	req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("%s%s/%s", config.GetConfig().BridgeAddress, LightGroupUrl, lightGroupId), bytes.NewBuffer(data))
 	if err != nil {
