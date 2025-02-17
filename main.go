@@ -27,6 +27,8 @@ func main() {
 		return
 	}
 
+	filter := ""
+
 	// Load data
 	mainData := loadData()
 
@@ -34,6 +36,7 @@ func main() {
 	header := uiElements.GetHeader()
 	tabpane := uiElements.GetTabs()
 	footer := uiElements.GetFooter()
+	searchbar := uiElements.GetSearchBar(filter)
 
 	// termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
@@ -52,7 +55,16 @@ func main() {
 		}
 	}
 
-	ui.Render(header, tabpane, roommenu, sceneMenu, footer)
+	// Render function
+	renderUI := func() {
+		ui.Clear()
+		ui.Render(header, tabpane, roommenu, sceneMenu, footer)
+		if filter != "" {
+			ui.Render(searchbar)
+		}
+	}
+
+	renderUI()
 
 	uiEvents := ui.PollEvents()
 	for {
@@ -73,15 +85,43 @@ func main() {
 		case "<Up>", "k":
 			activeMenu.ScrollUp()
 			if activeMenu == roommenu {
-				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes)
+				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes, filter)
 				sceneMenu.Rows = getSceneNames(mainData.Scenes)
 			}
 		case "<Down>", "j":
 			activeMenu.ScrollDown()
 			if activeMenu == roommenu {
-				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes)
+				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes, filter)
 				sceneMenu.Rows = getSceneNames(mainData.Scenes)
 			}
+		case "/":
+			if activeMenu == sceneMenu {
+				ui.Render(searchbar)
+			searchLoop:
+				for {
+					searchEvent := <-uiEvents
+					switch searchEvent.ID {
+					case "<Escape>", "<Enter>":
+						// Stop capturing search input and hide the panel
+						break searchLoop
+					case "<Backspace>":
+						// Remove the last character from the filter
+						if len(filter) > 0 {
+							filter = filter[:len(filter)-1]
+						}
+						searchbar.Text = filter
+						renderUI()
+					default:
+						// Append the pressed key to the filter
+						filter += string(searchEvent.ID)
+						searchbar.Text = filter
+						renderUI()
+					}
+				}
+			}
+		case "<C-l>":
+			filter = ""
+			renderUI()
 		case "0", "1", "2", "3", "4":
 			newSelected, err := strconv.Atoi(e.ID)
 			if err != nil {
@@ -89,13 +129,13 @@ func main() {
 			}
 			activeMenu.SelectedRow = newSelected
 			if activeMenu == roommenu {
-				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes)
+				mainData.Scenes = getSceneDataByRoomOrZone(mainData.Rooms[activeMenu.SelectedRow].Id, &mainData.AllScenes, filter)
 				sceneMenu.Rows = getSceneNames(mainData.Scenes)
 			}
 		case "t":
 			if activeMenu == roommenu {
 				roomLightgroupId := mainData.Rooms[activeMenu.SelectedRow].LightGroup
-                toggleLightgroup(roomLightgroupId, mainData)
+				toggleLightgroup(roomLightgroupId, mainData)
 			}
 			if activeMenu == zoneMenu {
 				LightgroupId := mainData.Zones[activeMenu.SelectedRow].LightGroup
@@ -108,7 +148,7 @@ func main() {
 				if err != nil {
 					log.Fatal(err)
 				}
-            }
+			}
 		case "<Enter>":
 			if activeMenu == sceneMenu {
 				sceneId := mainData.Scenes[activeMenu.SelectedRow].Id
@@ -222,7 +262,7 @@ func loadData() ActiveData {
 
 	// Allocate Data
 	rooms := getRoomData(roomData)
-	scenes := getSceneDataByRoomOrZone(rooms[0].Id, scenesData)
+	scenes := getSceneDataByRoomOrZone(rooms[0].Id, scenesData, "")
 	zones := getZoneData(zoneData)
 	return ActiveData{Rooms: rooms, LightGroups: lightgroupData, Zones: zones, Scenes: scenes, AllScenes: *scenesData}
 }
