@@ -28,6 +28,7 @@ func main() {
 	}
 
 	filter := ""
+	searchMode := false
 
 	// Load data
 	mainData := loadData()
@@ -37,6 +38,7 @@ func main() {
 	tabpane := uiElements.GetTabs()
 	footer := uiElements.GetFooter()
 	searchbar := uiElements.GetSearchBar(filter)
+    searchbarFooter := uiElements.GetSearchBarFooter()
 
 	// termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
@@ -59,8 +61,8 @@ func main() {
 	renderUI := func() {
 		ui.Clear()
 		ui.Render(header, tabpane, roommenu, sceneMenu, footer)
-		if filter != "" {
-			ui.Render(searchbar)
+		if searchMode {
+			ui.Render(searchbar, searchbarFooter)
 		}
 	}
 
@@ -96,7 +98,8 @@ func main() {
 			}
 		case "/":
 			if activeMenu == sceneMenu {
-				ui.Render(searchbar)
+				searchMode = true
+				renderUI()
 			searchLoop:
 				for {
 					searchEvent := <-uiEvents
@@ -121,6 +124,7 @@ func main() {
 			}
 		case "<C-l>":
 			filter = ""
+            searchMode = false
 			renderUI()
 		case "0", "1", "2", "3", "4":
 			newSelected, err := strconv.Atoi(e.ID)
@@ -178,7 +182,7 @@ func main() {
 		case "u":
 			activeMenu.ScrollHalfPageUp()
 		}
-		ui.Render(header, tabpane, activeMenu, sceneMenu, footer)
+        renderUI()
 	}
 }
 
