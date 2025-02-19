@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"kyrill.dev/kue/api"
 )
@@ -48,14 +49,16 @@ func getZoneData(zones *api.ZoneResponse) []RoomOrZone {
 	return zoneData
 }
 
-func getSceneDataByRoomOrZone(roomOrZoneId string, scenes *api.SceneResponse) []Scene {
+func getSceneDataByRoomOrZone(roomOrZoneId string, scenes *api.SceneResponse, filter string) []Scene {
 	sceneData := []Scene{}
 	for _, scene := range scenes.Data {
 		if scene.Group.Rid == roomOrZoneId {
-			sceneData = append(sceneData, Scene{
-				Id:   scene.ID,
-				Name: scene.Metadata.Name,
-			})
+            if filter == "" || strings.Contains(strings.ToLower(scene.Metadata.Name), strings.ToLower(filter)) {
+				sceneData = append(sceneData, Scene{
+					Id:   scene.ID,
+					Name: scene.Metadata.Name,
+				})
+			}
 		}
 	}
 	return sceneData
