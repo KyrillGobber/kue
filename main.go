@@ -29,7 +29,6 @@ func main() {
 
 	filter := ""
 	searchMode := false
-
 	// Load data
 	mainData := loadData()
 
@@ -38,29 +37,36 @@ func main() {
 	tabpane := uiElements.GetTabs()
 	footer := uiElements.GetFooter()
 	searchbar := uiElements.GetSearchBar(filter)
-    searchbarFooter := uiElements.GetSearchBarFooter()
+	searchbarFooter := uiElements.GetSearchBarFooter()
 
 	// termWidth, termHeight := ui.TerminalDimensions()
 	roommenu := menu.GetItemMenu(getRoomNames(mainData.Rooms), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 	sceneMenu := menu.GetSceneMenu(getSceneNames(mainData.Scenes), menu.Coords{X1: 50, Y1: 6, X2: 100, Y2: 30})
 	zoneMenu := menu.GetItemMenu(getRoomNames(mainData.Zones), menu.Coords{X1: 5, Y1: 6, X2: 50, Y2: 30})
 
-	activeMenu := roommenu
-	renderTab := func() {
-		switch tabpane.ActiveTabIndex {
-		case 0:
-			activeMenu = roommenu
-			ui.Render(roommenu)
-		case 1:
-			activeMenu = zoneMenu
-			ui.Render(zoneMenu)
-		}
+	resetFilter := func() {
+		filter = ""
+		searchMode = false
+		sceneMenu.Rows = getSceneNames(mainData.Scenes)
 	}
+
+	activeMenu := roommenu
+	activeMenu.BorderStyle = ui.NewStyle(ui.ColorYellow)
+	// renderTab := func() {
+	// 	switch tabpane.ActiveTabIndex {
+	// 	case 0:
+	// 		activeMenu = roommenu
+	// 		ui.Render(roommenu)
+	// 	case 1:
+	// 		activeMenu = zoneMenu
+	// 		ui.Render(zoneMenu)
+	// 	}
+	// }
 
 	// Render function
 	renderUI := func() {
 		ui.Clear()
-		ui.Render(header, tabpane, roommenu, sceneMenu, footer)
+		ui.Render(header, roommenu, sceneMenu, footer)
 		if searchMode {
 			ui.Render(searchbar, searchbarFooter)
 		}
@@ -74,16 +80,16 @@ func main() {
 		switch e.ID {
 		case "q", "<C-c>":
 			return
-		case "h":
-			tabpane.FocusLeft()
-			ui.Clear()
-			ui.Render(header, tabpane, footer)
-			renderTab()
-		case "l":
-			tabpane.FocusRight()
-			ui.Clear()
-			ui.Render(header, tabpane, footer)
-			renderTab()
+		// case "h":
+		// 	tabpane.FocusLeft()
+		// 	ui.Clear()
+		// 	ui.Render(header, tabpane, footer)
+		// 	renderTab()
+		// case "l":
+		// 	tabpane.FocusRight()
+		// 	ui.Clear()
+		// 	ui.Render(header, tabpane, footer)
+		// 	renderTab()
 		case "<Up>", "k":
 			activeMenu.ScrollUp()
 			if activeMenu == roommenu {
@@ -120,11 +126,19 @@ func main() {
 						searchbar.Text = filter
 						renderUI()
 					}
+					if searchMode && filter != "" {
+						sceneMenu.Rows = nil
+						for _, scene := range mainData.Scenes {
+							if containsIgnoreCase(scene.Name, filter) {
+								sceneMenu.Rows = append(sceneMenu.Rows, scene.Name)
+							}
+						}
+					}
+					renderUI()
 				}
 			}
 		case "<C-l>":
-			filter = ""
-            searchMode = false
+			resetFilter()
 			renderUI()
 		case "0", "1", "2", "3", "4":
 			newSelected, err := strconv.Atoi(e.ID)
@@ -156,19 +170,28 @@ func main() {
 		case "<Enter>":
 			if activeMenu == sceneMenu {
 				sceneId := mainData.Scenes[activeMenu.SelectedRow].Id
+				// Filter for sceneId
+				for _, scene := range mainData.Scenes {
+					if scene.Name == activeMenu.Rows[activeMenu.SelectedRow] {
+						sceneId = scene.Id
+					}
+				}
 				_, err := api.SetSceneForRoom(sceneId)
 				if err != nil {
 					log.Fatal(err)
 				}
 			} else {
 				activeMenu = sceneMenu
-				sceneMenu.BorderStyle = ui.NewStyle(ui.ColorYellow)
+				activeMenu.BorderStyle = ui.NewStyle(ui.ColorYellow)
+                roommenu.BorderStyle = ui.NewStyle(ui.ColorWhite)
 			}
 		case "<Escape>":
 			sceneMenu.BorderStyle = ui.NewStyle(ui.ColorWhite)
 			switch tabpane.ActiveTabIndex {
 			case 0:
+				resetFilter()
 				activeMenu = roommenu
+				activeMenu.BorderStyle = ui.NewStyle(ui.ColorYellow)
 			case 1:
 				activeMenu = zoneMenu
 			}
@@ -182,7 +205,8 @@ func main() {
 		case "u":
 			activeMenu.ScrollHalfPageUp()
 		}
-        renderUI()
+
+		renderUI()
 	}
 }
 
